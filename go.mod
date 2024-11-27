@@ -1,4 +1,4 @@
-module github/vermakmanish001/distributed-file-storage
+module github.com/vermakmanish001/distributed-file-storage
 
 go 1.23.3
 

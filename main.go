@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/vermakmanish00/disributed-file-storage/p2p"
+	"github.com/vermakmanish001/distributed-file-storage/p2p"
 )
 
 func makeServer(listenAddr string, nodes ...string) *FileServer {

@@ -10,4 +10,5 @@ type Peer interface {
 // form (TCP, UDP, websockets, ...)
 type Transport interface {
 	ListenAndAccept() error
+	Consume() <-chan RPC
 }

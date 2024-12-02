@@ -1,41 +1,52 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	"log"
+	"time"
 
 	"github.com/vermakmanish001/distributed-file-storage/p2p"
 )
 
-func OnPeer(peer p2p.Peer) error {
-	peer.Close()
-	return nil
+func makeServer(listenAddr string, nodes ...string) *FileServer {
+	tcpTransport := p2p.NewTCPTransport(p2p.TCPTransportOpts{
+		ListenAddr:    listenAddr,
+		HandshakeFunc: p2p.NOPHandshakeFunc,
+		Decoder:       &p2p.DefaultDecoder{},
+		OnPeer:        nil,
+	})
+
+	fileServerOpts := FileServerOpts{
+		ListenAddr:        listenAddr,
+		StorageRoot:       listenAddr + "_network",
+		PathTransformFunc: CASPathTransformFunc,
+		Transport:         tcpTransport,
+		BootstrapNodes:    nodes,
+	}
+
+	s := NewFileServer(fileServerOpts)
+	tcpTransport.OnPeer = s.OnPeer
+	return s
 }
 
 func main() {
-
-	tcpOpts := p2p.TCPTransportOpts{
-		ListenAddr:    ":3000",
-		HandshakeFunc: p2p.NOPHandshakeFunc,
-		Decoder:       p2p.DefaultDecoder{},
-		OnPeer:        OnPeer,
-	}
-
-	// Pass the tcpOpts variable to the NewTCPTransport function
-	tr := p2p.NewTCPTransport(tcpOpts)
+	s1 := makeServer(":3000")
+	s2 := makeServer(":4000", ":3000")
 
 	go func() {
-		for {
-			msg := <-tr.Consume()
-			fmt.Printf("%v\n", msg)
-		}
+		log.Fatal(s1.Start())
 	}()
 
-	// Start listening and accepting connections
-	if err := tr.ListenAndAccept(); err != nil {
-		log.Fatal(err)
-	}
+	time.Sleep(4 * time.Second)
 
-	// Keep the main function running
+	go func() {
+		log.Fatal(s2.Start())
+	}()
+
+	time.Sleep(4 * time.Second)
+
+	data := bytes.NewReader([]byte("my big data file here "))
+	s2.StoreData("myprivatedata", data)
+
 	select {}
 }

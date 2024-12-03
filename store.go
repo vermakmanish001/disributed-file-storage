@@ -107,7 +107,7 @@ func (s *Store) Delete(key string) error {
 	return os.RemoveAll(firstPathNameWithRoot)
 }
 
-func (s *Store) Write(key string, r io.Reader) error {
+func (s *Store) Write(key string, r io.Reader) (int64, error) {
 	// Use the `writeStream` method to handle the actual writing logic
 	return s.writeStream(key, r)
 }
@@ -131,14 +131,14 @@ func (s *Store) readStream(key string) (io.ReadCloser, error) {
 	return os.Open(fullPathWithRoot)
 }
 
-func (s *Store) writeStream(key string, r io.Reader) error {
+func (s *Store) writeStream(key string, r io.Reader) (int64, error) {
 	// Apply PathTransformFunc to generate the path
 	pathKey := s.PathTransformFunc(key)
 
 	pathNameWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.PathName) // Fixed path joining
 
 	if err := os.MkdirAll(pathNameWithRoot, os.ModePerm); err != nil {
-		return err
+		return 0, err
 	}
 
 	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath()) // Fixed path joining
@@ -146,15 +146,14 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 	// Write the data to the file
 	f, err := os.Create(fullPathWithRoot)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer f.Close()
 
 	n, err := io.Copy(f, r)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	log.Printf("written(%d) bytes to disk: %s", n, fullPathWithRoot) // Logs the full path including the nested folders.
-	return nil
+	return n, nil
 }

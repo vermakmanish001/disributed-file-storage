@@ -161,11 +161,14 @@ func (s *FileServer) broadcast(msg *Message) error {
 	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
 		return err
 	}
+
 	for _, peer := range s.peers {
+		peer.Send([]byte{p2p.IncomingMessage})
 		if err := peer.Send(buf.Bytes()); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -199,6 +202,16 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 		return nil, err
 	}
 
+	for _, peer := range s.peers {
+		fileBuffer := new(bytes.Buffer)
+		n, err := io.Copy(fileBuffer, peer)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("received bytes over the network :", n)
+		fmt.Println(fileBuffer.String())
+	}
+
 	select {}
 	return nil, nil
 }
@@ -224,9 +237,10 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 		return err
 	}
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Millisecond * 5)
 
 	for _, peer := range s.peers {
+		peer.Send([]byte{p2p.IncomingStream})
 		n, err := io.Copy(peer, fileBuffer)
 		if err != nil {
 			return err
@@ -294,6 +308,8 @@ func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error
 	if !s.store.Has(msg.Key) {
 		return fmt.Errorf("need to server file (%s) does not exist on disk", msg.Key)
 	}
+
+	fmt.Printf("serving file (%s) over the network\n", msg.Key)
 	r, err := s.store.Read(msg.Key)
 	if err != nil {
 		return err

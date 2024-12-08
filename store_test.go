@@ -24,6 +24,7 @@ func TestPathTransformFunc(t *testing.T) {
 
 func TestStore(t *testing.T) {
 	s := newStore()
+	id := generateID()
 	defer teardown(t, s)
 
 	t.Log("Starting TestStore")
@@ -33,17 +34,17 @@ func TestStore(t *testing.T) {
 		data := []byte("some jpg bytes")
 
 		t.Logf("Writing key: %s", key)
-		if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
+		if _, err := s.writeStream(id, key, bytes.NewReader(data)); err != nil {
 			t.Fatalf("Failed to write stream for key %s: %v", key, err)
 		}
 
 		t.Logf("Checking existence of key: %s", key)
-		if ok := s.Has(key); !ok {
+		if ok := s.Has(id, key); !ok {
 			t.Errorf("Expected to have key %s", key)
 		}
 
 		t.Logf("Reading key: %s", key)
-		r, err := s.Read(key)
+		_, r, err := s.Read(id, key)
 		if err != nil {
 			t.Fatalf("Failed to read key %s: %v", key, err)
 		}
@@ -54,11 +55,11 @@ func TestStore(t *testing.T) {
 		}
 
 		t.Logf("Deleting key: %s", key)
-		if err := s.Delete(key); err != nil {
+		if err := s.Delete(id, key); err != nil {
 			t.Fatalf("Failed to delete key %s: %v", key, err)
 		}
 
-		if ok := s.Has(key); ok {
+		if ok := s.Has(id, key); ok {
 			t.Errorf("Expected NOT to have key %s", key)
 		}
 	}
